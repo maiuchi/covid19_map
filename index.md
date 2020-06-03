@@ -11,8 +11,7 @@ Let's get started!
 I would suggest you to create a folder and an R project (R Studio -> File -> New Project) to keep things organized. 
 Also, please download a dataset from this page, and name it as "covid19_us-counties.csv"
 
-### now you are ready with your R project and script files
-### ... make sure you have all the package you need!
+### now you are ready with your R project and script files... make sure you have all the package you need!
 ```r
 library(dplyr)
 library(ggplot2)
