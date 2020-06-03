@@ -104,6 +104,7 @@ usmap::plot_usmap(data = covid_sum, values = "death_sum", color = "grey40") +
 
 #remove boarders
         panel.border=element_blank(),
+        
 #remove grid lines 
         panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(),
