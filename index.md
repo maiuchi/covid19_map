@@ -10,7 +10,8 @@ Let's get started!
 
 I would suggest you to create an R project (R Studio -> File -> New Project) to keep things organized. 
 
-### Now you are ready with your R project and script files... Make sure you have all the package you need!
+### Now you are ready with your R project and script files
+### ... Make sure you have all the package you need!
 ```r
 library(dplyr)
 library(ggplot2)
