@@ -37,7 +37,7 @@ usmap::plot_usmap(data = covid_sum, values = "death_sum", color = "grey40") +
        subtitle = "as of may 31, 2020",
        caption = "data: NYT, author: mai uchida", 
        fill = "deaths (n)") + 
-  theme_classic()+
+  theme_classic() +
   theme(panel.background=element_blank(),
         panel.border=element_blank(),
         panel.grid.major=element_blank(),
