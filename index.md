@@ -69,6 +69,8 @@ usmap::plot_usmap(data = covid_sum, values = "death_sum") +
   scale_fill_continuous() + #visualizing the date in gradient
   theme_grey() #R default theme
 ```
+![grey theme](/images/Grey_theme.png)
+
 ### let's make it more visually appealing!
 ```r
 #line color = grey
@@ -86,6 +88,7 @@ usmap::plot_usmap(data = covid_sum, values = "death_sum", color = "grey40") +
 #set the theme to classic (my go-to theme!)
   theme_classic()
 ```
+![classic_theme](/images/Classic_theme.png)
 
 ### let's clean up a bit more
 ```r
@@ -120,3 +123,4 @@ usmap::plot_usmap(data = covid_sum, values = "death_sum", color = "grey40") +
         axis.title.x=element_blank(),
         axis.title.y=element_blank())
 ``` 
+![final](/images/final.png)
