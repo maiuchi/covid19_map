@@ -1,8 +1,8 @@
 # Making a COVID-19 Map in R
 
-Have you ever womdered how COVID-19 maps are made? You have quite a few options to make one from using Geographic Information Systems (GIS) software like QGIS or ArcGIS to coding in R or Python.
+Have you ever wondered how COVID-19 maps are made? You have quite a few options to make one from using Geographic Information Systems (GIS) software like QGIS or ArcGIS to coding in R or Python.
 
-In this tutorial, you will learn how to make a COVID-19 dealth toll map in R using [NYT publicly available data](https://github.com/nytimes/covid-19-data). This tutorial assumes that you know the basics of R and the structyre of geo-spatial data. 
+In this tutorial, you will learn how to make a COVID-19 dealth toll map in R using [NYT publicly available data](https://github.com/nytimes/covid-19-data). This tutorial assumes that you know the basics of R and have some familiatiry with geo-spatial data. 
 
 Let's get started! 
 
@@ -28,11 +28,9 @@ library(viridis)
 ### set and check your working directly 
 ```r
 #check your working directory
-
 getwd()
 
 #set your working directory 
-
 setwd(/YOUR FILE PATH HERE/)
 ```
 ### load the dataset
@@ -40,7 +38,6 @@ setwd(/YOUR FILE PATH HERE/)
 covid <- read_csv("covid19_us-counties.csv")
 
 #make sure that data is properly loaded and check the structure of it
-
 glimpse(covid)
 ```
 
@@ -123,6 +120,8 @@ usmap::plot_usmap(data = covid_sum, values = "death_sum", color = "grey40") +
         axis.title.y=element_blank())
 ``` 
 ![final](/images/final.png)
+
+## Voila! Now you know how to make a COVID-19 map in a few lines of code!
 
 ### final code here! 
 ```r
