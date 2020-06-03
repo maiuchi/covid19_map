@@ -22,7 +22,7 @@ library(usmap)
 library(viridis)
 
 #if you don't have the listed packages installed...
-#please do by calling the function "install.packages("put the name of the package")"
+#please do so by calling the function "install.packages("put the name of the package")"
 ``` 
 
 ### check and set your working directly 
