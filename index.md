@@ -121,7 +121,7 @@ usmap::plot_usmap(data = covid_sum, values = "death_sum", color = "grey40") +
 ``` 
 ![final](/images/final.png)
 
-## Voila! Now you know how to make a COVID-19 map in a few lines of code!
+### Voila! Now you know how to make a COVID-19 map in a few lines of code!
 
 ### final code here! 
 ```r
