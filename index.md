@@ -15,4 +15,6 @@ library(tidyverse) #read_csv
 library(lubridate)
 library(usmap)
 library(viridis)
+
+#if you don't have the listed packages installed, please do by calling the function "install.packages("put the name of the package")"
 ``` 
