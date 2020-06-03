@@ -25,7 +25,7 @@ library(viridis)
 #please do by calling the function "install.packages("put the name of the package")"
 ``` 
 
-### set and check your working directly 
+### check and set your working directly 
 ```r
 #check your working directory
 getwd()
