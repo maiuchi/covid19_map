@@ -140,6 +140,7 @@ library(viridis)
 
 #set and check your working directory
 getwd()
+setwd(/YOUR FILE PATH HERE/)
 
 #load the dataset
 covid <- read_csv("covid19_us-counties.csv")
