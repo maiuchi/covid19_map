@@ -1,0 +1,9 @@
+{
+    "path" : "~/Desktop/covid19_map",
+    "sortOrder" : [
+        {
+            "ascending" : true,
+            "columnIndex" : 2
+        }
+    ]
+}

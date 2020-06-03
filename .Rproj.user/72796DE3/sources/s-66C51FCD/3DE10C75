@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1591123490049.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "3DE10C75",
+    "lastKnownWriteTime" : 8243121639319928838,
+    "last_content_update" : 1591123490049,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "76941C07",
+        "caption" : "covid_sum",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=covid_sum&cache_key=76941C07",
+        "displayedObservations" : "55",
+        "environment" : "",
+        "object" : "covid_sum",
+        "preview" : "0",
+        "totalObservations" : "55",
+        "variables" : "2"
+    },
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}

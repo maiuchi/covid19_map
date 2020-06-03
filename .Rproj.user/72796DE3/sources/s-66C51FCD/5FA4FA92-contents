@@ -1,0 +1,669 @@
+########Zendesk Apr2020#######----Analysis 
+###############05-14-20#######
+
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(shiny)
+library(formattable)
+library(arsenal)
+library(DT)
+library(readxl)
+library(tidyr)
+library(stringr)
+library(tidyverse)
+library(lubridate)
+library(scales)
+library(tools)
+
+getwd()
+setwd("/Users/maiuchida/Desktop/R_Analysis/zenDesk/data/access")
+
+infoApr20 <- read_csv("infoApr20.csv")
+
+infoApr20$ymd <- as.Date(infoApr20$ymd, format = "%m/%d/%y")
+
+infoApr20$day <- tolower(infoApr20$day)
+
+#remove no shows-------------
+no_show <- infoApr20 %>% filter(time_spent == "No show") #1 no shows 
+
+infoApr20_CLN <- infoApr20 %>% filter(time_spent != "No show") #61 tickets (some Jan, April tickets)
+
+infoApr20_CLN <- infoApr20_CLN %>% filter(!month == 05) #48 tickes solved
+
+#overall tickets trend
+
+aprTot <- infoApr20_CLN %>%
+  group_by(ymd) %>% 
+  count()
+
+#add days
+date <- ymd(aprTot$ymd)
+aprTot$day <- wday(date)
+as.character(aprTot$day)
+
+#convert days (number) to letter
+aprTot$day[which(aprTot$day == "1")] <- "sunday"
+aprTot$day[which(aprTot$day == "2")] <- "monday"
+aprTot$day[which(aprTot$day == "3")] <- "tuesday"
+aprTot$day[which(aprTot$day == "4")] <- "wednesday"
+aprTot$day[which(aprTot$day == "5")] <- "thursday"
+aprTot$day[which(aprTot$day == "6")] <- "friday"
+aprTot$day[which(aprTot$day == "7")] <- "saturday"
+
+#plot for total ticket trends--------------------
+ggplot(aprTot, aes(ymd, n)) + 
+  geom_line() + 
+  scale_x_date(date_breaks = "day", date_labels = "%b %d", 
+               limits = c(as.Date("2020-04-01"), as.Date("2020-04-30"))) + 
+  labs(title = "zendesk ticket trends for the informationist team (total, april 2020)", 
+       subtitle = "N = 69",
+       y = "ticket count" , x = "date") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10),
+        legend.title = element_blank(),
+        legend.position = "bottom") 
+
+
+
+#prepare april 19 dataset 
+apr19Tot <- apr2019_pi %>%
+  group_by(ymd) %>% 
+  count()
+
+#add days
+date <- ymd(apr19Tot$ymd)
+apr19Tot$day <- wday(date)
+as.character(apr19Tot$day)
+
+#convert days (number) to letter
+apr19Tot$day[which(apr19Tot$day == "1")] <- "sunday"
+apr19Tot$day[which(apr19Tot$day == "2")] <- "monday"
+apr19Tot$day[which(apr19Tot$day == "3")] <- "tuesday"
+apr19Tot$day[which(apr19Tot$day == "4")] <- "wednesday"
+apr19Tot$day[which(apr19Tot$day == "5")] <- "thursday"
+apr19Tot$day[which(apr19Tot$day == "6")] <- "friday"
+apr19Tot$day[which(apr19Tot$day == "7")] <- "saturday"
+
+#combined dataset
+apr19Tot$year <- "2019"
+aprTot$year <- "2020"
+
+apr19Tot$ymd <- as.Date(apr19Tot$ymd)
+aprCmb <- rbind(apr19Tot, aprTot)
+aprCmb$ymd <- as.Date(aprCmb$ymd)
+
+#separate the column by year, month, date
+aprCmb$ymd2 <- aprCmb$ymd
+aprCmb <- aprCmb %>% separate(ymd2, c("year", "month", "date"), sep = "-")
+aprCmb$date <- as.factor(aprCmb$date)
+aprCmb$year <- as.factor(aprCmb$year)
+aprCmb$year <- factor(aprCmb$year, level = c("2020", "2019"))
+
+
+p1 <-
+  ggplot(aprCmb, aes(x = date, y = n, group = year, color = year, linetype = year)) + 
+  geom_line() +
+  labs(title = "zendesk ticket trends comparison - info team (2019 vs 2020)", 
+       subtitle = "N(2020) = 69, N(2019) = 48",
+       y = "ticket count" , x = "date") +
+  scale_color_manual(values = c("#000080", "#00B2FF")) +
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "bottom",
+        strip.background = element_blank())
+
+p1
+
+
+#compare it with April 2019
+
+#plot for total ticket trends [April 2019] --------------------
+ggplot(apr19Tot, aes(ymd, n)) + 
+  geom_line() + 
+  scale_x_date(date_breaks = "1 day", date_labels = "%b %d", 
+               limits = c(as.Date("2019-04-02"), as.Date("2019-04-30"))) +
+  ylim(min(apr19Tot$n), 6) +
+  labs(title = "zendesk ticket trends for the informationist team (total, april 2019)", 
+       subtitle = "N = 48",
+       y = "ticket count" , x = "date") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10),
+        legend.title = element_blank(),
+        legend.position = "bottom") 
+
+
+#plot for ticket trends by school---------------- think how to classify PT people
+aprTot_school <- infoApr20_CLN %>%
+  group_by(affiliation) %>%
+  count()
+
+aprTot_school$affiliation[which(aprTot_school$affiliation == "-")] <- "Unknown"
+aprTot_school$affiliation[which(aprTot_school$affiliation == "Physical Therapy")] <- "College of Physicians and Surgeons"
+
+aprTot_school_Table <- aprTot_school %>% arrange(desc(n))
+
+
+
+freqAf_top <- aprTot_school %>% filter(affiliation == "College of Physicians and Surgeons" | 
+                                         affiliation == "School of Nursing" | 
+                                         affiliation == "Mailman School of Public Health" | 
+                                         affiliation == "New York Presbyterian")
+
+freqAf_top$affiliation[which(freqAf_top$affiliation == "College of Physicians and Surgeons")] <- "VP&S"
+freqAf_top$affiliation[which(freqAf_top$affiliation == "School of Nursing")] <- "SON"
+freqAf_top$affiliation[which(freqAf_top$affiliation == "Mailman School of Public Health")] <- "Mailman"
+freqAf_top$affiliation[which(freqAf_top$affiliation == "New York Presbyterian")] <- "NYP"
+
+
+
+#reverse the order as follow 
+freqAf_top$affiliation <- factor(freqAf_top$affiliation, levels = c("NYP",
+                                                                    "SON", 
+                                                                    "Mailman",
+                                                                    "VP&S"
+))
+
+
+p2 <- ggplot(freqAf_top, aes(x= affiliation, y = n, color = affiliation)) +
+  geom_point() + 
+  geom_segment( aes(x=affiliation, xend=affiliation, y=0, yend= n)) +
+  labs(title = "ticket trend comparison by affiliation (top 4, n = 49)", 
+       subtitle = "april 2020 - 70% of total tickets solved", 
+       y = "count") +
+  scale_color_manual(values = c("#488F5B","#FA8677", "#C2076E", "#648CBD")) +
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "none") +
+  coord_flip()
+
+p2
+
+#day and role------
+dayRole <- with(infoApr20_CLN, table(role, day))
+dayRole <- as.data.frame(dayRole)
+
+dayRole <- dayRole %>% filter(role == "Student" | role == "Faculty" | role == "Postdoc Fellow" | 
+                                role == "Staff")
+
+dayRole$day <- factor(dayRole$day, level = c("monday", "tuesday", "wednesday", "thursday",
+                                             "friday", "saturday", "sunday"))
+
+dayRole$role <- factor(dayRole$role, level = c("Student", "Faculty", "Staff", "Postdoc Fellow"))
+
+p4 <- ggplot(dayRole, aes(day, Freq, group = role, color = role)) +
+  geom_line() +
+  geom_point(size = 1, shape = 21, fill = "white") +
+  labs(title = "monthly ticket trend comparison by top 4 roles and day (n = 64)", 
+       subtitle = "April 2020 -- 93% of total tickets solved",
+       y = "count" , x = "month") + 
+  scale_color_manual(values = c("#F27979","#F2BF27", "#6F8CA6", "#8BCAD9")) +
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10),
+        legend.title = element_blank(),
+        legend.position = "bottom")
+
+p4
+
+
+#days--------
+infoApr20_CLN <- within(infoApr20_CLN, 
+                        day <- factor(day, 
+                                      levels = c("monday", "tuesday", "wednesday",
+                                                 "thursday", "friday", "saturday", 
+                                                 "sunday")))
+dayPlot <- ggplot(infoApr20_CLN, aes(day)) + 
+  geom_bar(fill= "#000080", alpha = 0.9) + 
+  labs(title = "ticket distribution by day") + 
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "none")
+
+dayPlot
+dayTable <- table(infoApr20_CLN$day) %>% as.data.frame() %>% arrange(desc(Freq))
+colnames(dayTable) <- c("day", "n")
+formattable(dayTable, 
+            align = c("l","l"))
+
+
+
+
+
+#day and affiliation----------
+dayAff <- with(infoApr20_CLN, table(affiliation, day))
+dayAff <- as.data.frame(dayAff)
+
+dayAff <- dayAff %>% filter(affiliation == "College of Physicians and Surgeons" | 
+                              affiliation == "School of Nursing" | 
+                              affiliation == "Mailman School of Public Health" | 
+                              affiliation == "New York Presbyterian")
+
+dayAff$affiliation <- as.character(dayAff$affiliation)
+dayAff$affiliation[which(dayAff$affiliation == "College of Physicians and Surgeons")] <- "VP&S"
+dayAff$affiliation[which(dayAff$affiliation == "School of Nursing")] <- "SON"
+dayAff$affiliation[which(dayAff$affiliation == "Mailman School of Public Health")] <- "Mailman"
+dayAff$affiliation[which(dayAff$affiliation == "New York Presbyterian")] <- "NYP"
+
+dayAff$day <- factor(dayAff$day, level = c("monday", "tuesday", "wednesday", "thursday",
+                                           "friday", "saturday", "sunday"))
+
+dayAff$affiliation <- factor(dayAff$affiliation, level = c("VP&S",
+                                                           "Mailman",
+                                                           "SON",
+                                                           "NYP"))
+
+
+p5 <- ggplot(dayAff, aes(day, Freq, group = affiliation, color = affiliation)) +
+  geom_line() +
+  geom_point(size = 1, shape = 21, fill = "white") +
+  labs(title = "monthly ticket trend comparison by affiliation (top 4, n = 49)", 
+       subtitle = "April, 2020 -- 71% of the total tickets solved", 
+       y = "count", x = "day") +
+  scale_color_manual(values = c("#648CBD", "#C2076E", "#FA8677", "#488F5B")) +
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "bottom")
+
+p5
+
+
+#day, affiliation, and role -------------
+dayAf_role <- with(infoApr20_CLN_noClass, table(affiliation, role, day))
+dayAf_role <- as.data.frame(dayAf_role)
+
+dayAf_role$affiliation <- as.character(dayAf_role$affiliation)
+dayAf_role$affiliation[which(dayAf_role$affiliation == "College of Physicians and Surgeons")] <- "VP&S"
+dayAf_role$affiliation[which(dayAf_role$affiliation == "School of Nursing")] <- "SON"
+dayAf_role$affiliation[which(dayAf_role$affiliation == "Mailman School of Public Health")] <- "Mailman"
+
+dayAf_role <- dayAf_role %>% 
+  filter(affiliation == "VP&S" | 
+           affiliation == "SON" | 
+           affiliation == "Mailman") %>%
+  filter(role == "Faculty" | role == "Student")
+
+dayAf_role$day <- factor(dayAf_role$day, level = c("monday", "tuesday", "wednesday", "thursday",
+                                                   "friday", "saturday", "sunday"))
+
+p6 <- ggplot(dayAf_role, aes(day, Freq, group = affiliation,
+                             color = affiliation, linetype = role)) + 
+  geom_line() +
+  labs(title = "day ticket trend comparison by affiliation and role (n = 29)", 
+       subtitle = "April, 2020", 
+       y = "count", x = "month") +
+  scale_color_manual(values = c("#648CBD", "#C2076E", "#FA8677")) +
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "bottom",
+        strip.background = element_blank())
+
+p6 <- p6 + facet_wrap(~ role, ncol = 2)
+p6
+
+
+#in person appt time frame--------
+#remove class tickets
+time_frame <- infoApr20_CLN %>% filter(serviceType != 311928)
+
+time_frame <- infoApr20_CLN %>% filter(venue == "In Person" | venue == "Phone"|
+                                         venue == "Online Conference") 
+
+time_frame$time_frame[which(time_frame$time_frame == "morning")] <- "morning"
+time_frame$time_frame[which(time_frame$time_frame == "early_afternoon")] <- "early afternoon"
+time_frame$time_frame[which(time_frame$time_frame == "late_afternoon")] <- "late afternoon"
+
+time_frame <- within(time_frame, 
+                     time_frame <- factor(time_frame, 
+                                          levels = c("morning", "early afternoon", 
+                                                     "late afternoon", "evening")))
+
+timePlot <- ggplot(time_frame, aes(time_frame, fill = venue)) + 
+  geom_bar() + 
+  labs(title = "in-person/ zoom appointment preferred time frame", 
+       subtitle = "N = 32",
+       x = "time frame", y = "count") + 
+  scale_fill_manual(values = c("#072F5F","#1261A0", "#64C5D7")) +
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "right")
+timePlot
+
+time_frame_Table <- table(time_frame$time_frame) %>% as.data.frame() %>% arrange(desc(Freq)) #3 NA's 
+
+table(time_frame$role) #--Student 17, Faculty 6, Staff 4, Postdoc 4, NYP resident 1
+
+
+#role#
+anyNA(infoApr20_CLN$role)
+
+infoApr20_CLN <- within(infoApr20_CLN, 
+                        role <- factor(role, 
+                                       levels = names(sort(table(role), 
+                                                           decreasing = TRUE))))
+rolePlot <- ggplot(infoApr20_CLN, aes(role)) + geom_bar()
+rolePlot
+
+roleTable <- table(infoApr20_CLN$role) %>% as.data.frame() %>% arrange(desc(Freq))
+
+#affiliation#
+anyNA(infoApr20_CLN$affiliation)
+infoApr20_CLN <- within(infoApr20_CLN, 
+                        affiliation <- factor(affiliation, 
+                                              levels = names(sort(table(affiliation), 
+                                                                  decreasing = TRUE))))
+
+affTable <- table(infoApr20_CLN$affiliation) %>% as.data.frame() %>% arrange(desc(Freq))
+
+colnames(affTable) <- c("affliation", "count")
+
+affTable %>% 
+  arrange(desc(count)) %>%
+  slice(1:4) %>% 
+  ggplot(., aes(x= affliation, y = count)) + geom_bar(stat = "identity")
+
+#removing class tickets 
+venue_df <- infoApr20_CLN %>% select(nice.id, serviceType, venue) %>% filter(!serviceType == "311928")
+venue_df <- venue_df %>% filter(venue == "Website Request" | venue == "Online Conference"
+                                | venue == "In Person" | venue == "Phone" | venue == "Direct Email")
+venue_df <- within(venue_df, 
+                   venue <- factor(venue, 
+                                   levels = names(sort(table(venue), 
+                                                       decreasing = TRUE))))
+venuePlot <- 
+  ggplot(venue_df, aes(venue)) + 
+  geom_bar(fill= "#000080", alpha = 0.9) + 
+  labs(title = "tickets solved by venue", 
+       subtitle = "N = 69",
+       x = "venue", y = "count") + 
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "right")
+
+venuePlot
+
+venTable <- table(infoApr20_CLN$venue) %>% as.data.frame() %>% arrange(desc(Freq))
+
+#original categories#
+infoApr20_CLN2 <- infoApr20_CLN
+infoApr20_CLN2$category_list <- as.character(infoApr20_CLN2$category_list)
+infoApr20_CLN2$category_list[which(infoApr20_CLN2$category_list == "Bibliographic Citation Management Software")] <- "Citation Management"
+infoApr20_CLN2 <- within(infoApr20_CLN2, 
+                         category_list <- factor(category_list, 
+                                                 levels = names(sort(table(category_list), 
+                                                                     decreasing = TRUE))))
+catOrgTable <- table(infoApr20_CLN2$category_list) %>% as.data.frame() %>% arrange(desc(Freq))
+
+colnames(catOrgTable) <- c("original_category", "count")
+
+
+
+catOrgTable %>% 
+  arrange(desc(count)) %>%
+  slice(1:4) %>%
+  ggplot(., aes(original_category, count)) + 
+  geom_bar(stat = "identity", fill= "#000080", alpha = 0.9) + 
+  labs(title = "Service request classification (zendesk original)", 
+       subtitle = "N = 48",
+       x = "categories", y = "count") + 
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "right")
+
+#more detailed categories
+infoApr20_CLN[, 31:113][is.na(infoApr20_CLN[, 31:117])] <- 0
+
+infoApr20_CLN3 <- infoApr20_CLN
+infoApr20_CLN3$ymd <- as.character(infoApr20_CLN3$ymd)
+infoApr20_CLN3 <- infoApr20_CLN3 %>% filter(serviceType != 311928) #remove class tickets 
+
+cat <- gather(infoApr20_CLN3, key = "nice.id", "count", appointment_setup:tutorials)
+
+cat2 <- cat[!(cat$count == 0),]
+
+cat2 <- table(cat2$nice.id) %>% as.data.frame() %>% arrange(desc(Freq))
+
+colnames(cat2) <- c("categories", "count")
+
+#format the categories (changing how they look)
+cat2$categories <- gsub("_", " ", cat2$categories)
+cat2$categories <- toTitleCase(cat2$categories)
+
+cat2 %>% 
+  top_n(4) %>%
+  arrange(desc(count)) %>%
+  ggplot(., aes(x = reorder(categories, - count), count)) + 
+  geom_bar(stat = "identity", fill= "#000080", alpha = 0.9) + 
+  labs(title = "Service request classification (re-classified)", 
+       subtitle = "N = 132",
+       x = "categories", y = "count") + 
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "right")
+
+formattable(cat2,
+            align = c("l", "r"))
+
+#resources used
+
+res <- gather(infoApr20_CLN3, key = "nice.id", "count", Accessmedicine:Zotero)
+
+res <- res[!(res$count == 0),]
+
+res2 <- table(res$nice.id) %>% as.data.frame() %>% arrange(desc(Freq))
+
+colnames(res2) <- c("resources", "count")
+
+res2 %>% 
+  top_n(4) %>%
+  arrange(desc(count)) %>%
+  ggplot(., aes(x = reorder(resources, - count), count)) + 
+  geom_bar(stat = "identity", fill= "#000080", alpha = 0.9) + 
+  labs(title = "Top resources", 
+       subtitle = "N = 115",
+       x = "resource", y = "count") + 
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "right")
+
+formattable(res2,
+            align = c("l", "r"))
+
+#methodologies 
+method <- table(infoApr20_CLN3$methodology) %>% as.data.frame() %>% arrange(desc(Freq))
+colnames(method) <- c("methodology", "count")
+
+#format the categories (changing how they look)
+method$methodology <- gsub("_", " ", method$methodology)
+method$methodology <- toTitleCase(method$methodology)
+
+method %>% 
+  top_n(4) %>%
+  arrange(desc(count)) %>%
+  ggplot(., aes(x = reorder(methodology, - count), count)) + 
+  geom_bar(stat = "identity", fill= "#000080", alpha = 0.9) + 
+  labs(title = "Popular methodology", 
+       subtitle = "N = 69",
+       x = "resource", y = "count") + 
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "right")
+
+formattable(method,
+            align = c("l", "r"))
+
+#project types
+project <- table(infoApr20_CLN3$projectType) %>% as.data.frame() %>% arrange(desc(Freq))
+colnames(project) <- c("project", "count")
+
+#format the categories (changing how they look)
+project$project <- gsub("_", " ", project$project)
+project$project <- toTitleCase(project$project)
+
+project %>% 
+  top_n(4) %>%
+  arrange(desc(count)) %>%
+  ggplot(., aes(x = reorder(project, - count), count)) + 
+  geom_bar(stat = "identity", fill= "#000080", alpha = 0.9) + 
+  labs(title = "Popular project type", 
+       subtitle = "N = 47",
+       x = "resource", y = "count") + 
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "right")
+
+formattable(project,
+            align = c("l", "r"))
+
+#covidence related research ---- 3 yes, 1 maybe, 60 no
+table(infoApr20_CLN3$covid)
+
+#form 
+webReq <- infoApr20_CLN3 %>% filter(venue == "Website Request")
+
+form <- table(webReq$form) %>% as.data.frame() %>% arrange(desc(Freq))
+colnames(form) <- c("form", "count")
+
+form_new <- infoApr20_CLN3 %>% filter(form == "new") 
+form_new <- table(form_new$form_type) %>% as.data.frame() %>% arrange(desc(Freq))
+colnames(form_new) <- c("form_type", "count")
+
+#zoom utilization 
+zoom <- infoApr20_CLN3 %>% filter(venue == "Online Conference")
+
+
+#more investigations on detailed categories----------------------------------------------------------
+#more detailed categories
+infoApr20_CLN[, 30:113][is.na(infoApr20_CLN[, 30:113])] <- 0
+
+infoApr20_CLN3 <- infoApr20_CLN
+infoApr20_CLN3$ymd <- as.character(infoApr20_CLN3$ymd)
+infoApr20_CLN3 <- infoApr20_CLN3 %>% filter(serviceType != 311928)
+
+cat <- gather(infoApr20_CLN3, key = "nice.id", "count", appointment_setup:tutorials)
+
+cat3 <- cat[!(cat$count == 0),]
+
+dS <- cat3 %>%
+  filter(nice.id == "development_of_search_strategy")
+
+table(dS$affiliation)
+table(dS$role)
+
+database <- cat3 %>% 
+  filter(nice.id == "selection_of_databases")
+
+table(database$affiliation)
+table(database$role)
+
+sr <- cat3 %>%
+  filter(nice.id == "systematic_review_general_information")
+table(sr$affiliation)
+table(sr$role)
+
+cv <- cat3 %>%
+  filter(nice.id == "controlled_vocaburary")

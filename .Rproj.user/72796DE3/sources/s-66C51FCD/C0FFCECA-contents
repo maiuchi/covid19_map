@@ -1,0 +1,895 @@
+---
+title: "April 2020 Zendesk Service Trends - P&I"
+author: "Mai Uchida"
+date: "5/27/2020"
+output: 
+  html_document:
+        toc: true
+        toc_depth: 3
+        toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(shiny)
+library(formattable)
+library(arsenal)
+library(DT)
+library(readxl)
+library(tidyr)
+library(stringr)
+library(tidyverse)
+library(lubridate)
+library(scales)
+library(tools)
+library(XML)
+
+```
+### Summary 
+
+* Total number of clients served: 221 people
+* 44% increase in tickets solved in April, 2020 compared to April, 2019. This suggest that our services being visble and the effect of COVID-19 work from home arrangement is none or minimal. 
+* Potential revisions/ creation of resources 
+    + [A Comparison of Reviews](https://library.cumc.columbia.edu/sites/default/files/page/A%20Comparison%20of%20Reviews.pdf) (revise/ promote)
+    + Developing search strategies (potential KBA topic)
+* Good KBAs to promote:
+    + [Controlled Vocabulary in Databases](https://new.library.cumc.columbia.edu/node/2244)
+    + [Which databases should I search? A strategy for selecting appropriate sources](https://new.library.cumc.columbia.edu/node/2257)
+
+### Overall - Info Team 
+In April 2020, the informationist team solved 69 tickets in total. 
+```{r, include=FALSE}
+getwd()
+setwd("/Users/maiuchida/Desktop/R_Analysis/zenDesk/data/access")
+
+infoApr20 <- read_csv("infoApr20.csv")
+
+infoApr20$ymd <- as.Date(infoApr20$ymd, format = "%m/%d/%y")
+
+infoApr20$day <- tolower(infoApr20$day)
+
+#remove no shows-------------
+no_show <- infoApr20 %>% filter(time_spent == "No show") #1 no shows 
+
+infoApr20_CLN <- infoApr20 %>% filter(time_spent != "No show") #61 tickets (some Jan, April tickets)
+
+infoApr20_CLN <- infoApr20_CLN %>% filter(!month == 05) #48 tickes solved
+
+infoApr20_CLN$affiliation[which(infoApr20_CLN$affiliation == "Physical Therapy")] <- "College of Physicians and Surgeons"
+
+#overall tickets trend
+
+aprTot <- infoApr20_CLN %>%
+  group_by(ymd) %>% 
+  count()
+
+#add days
+date <- ymd(aprTot$ymd)
+aprTot$day <- wday(date)
+as.character(aprTot$day)
+
+#convert days (number) to letter
+aprTot$day[which(aprTot$day == "1")] <- "sunday"
+aprTot$day[which(aprTot$day == "2")] <- "monday"
+aprTot$day[which(aprTot$day == "3")] <- "tuesday"
+aprTot$day[which(aprTot$day == "4")] <- "wednesday"
+aprTot$day[which(aprTot$day == "5")] <- "thursday"
+aprTot$day[which(aprTot$day == "6")] <- "friday"
+aprTot$day[which(aprTot$day == "7")] <- "saturday"
+
+#load 2019 data 
+getwd()
+setwd("/Users/maiuchida/Desktop/R_Analysis/zenDesk/data")
+
+#load dataset---------------------
+zen <- xmlToDataFrame("Apr2020_tickets.xml") #latest xml file name
+zencsv <- read.csv("zen_Apr2020.csv") #latest csv file name
+deleted <- read_xlsx("10-28-19_zenTestticketsDELETED.xlsx")
+catRes <- read_csv(file = "04-02-20_catTest2.csv")
+
+colnames(zen)[14] <- "nice.id"
+colnames(zencsv)[2] <- "nice.id"
+
+zen$nice.id <- as.character(zen$nice.id)
+zencsv$nice.id <- as.character(zencsv$nice.id)
+
+#join two datasets----------------
+zenTotal <- full_join(zen, zencsv, by = "nice.id")
+
+#remove tickets--------------------#1250 tickets deleted
+zenTotal <- zenTotal[!(zenTotal$nice.id %in% deleted$nice.id),] #------72 manually deleted tickets
+
+emptix <- zenTotal[which(zenTotal$description == "X"), ] #----1178 deleted tickets
+
+zenTotal <- zenTotal[which(zenTotal$description != "X"),]
+
+#select columns-------------------
+zenTotal <- zenTotal[, c(3, 11, 12, 14, 24, 30, 37, 49, 82, 83, 89, 105, 107, 108, 109)]
+
+#separate the assigned at column
+zenTotal <- zenTotal %>% separate(`assigned-at`, "ymd", sep = "T")
+
+#separate the column by year, month, date
+zenTotal$ymd2 <- zenTotal$ymd
+zenTotal <- zenTotal %>% separate(ymd2, c("year", "month", "date"), sep = "-")
+
+#add days
+date <- ymd(zenTotal$ymd)
+zenTotal$day <- wday(date)
+as.character(zenTotal$day)
+
+#convert days (number) to letter
+zenTotal$day[which(zenTotal$day == "1")] <- "sunday"
+zenTotal$day[which(zenTotal$day == "2")] <- "monday"
+zenTotal$day[which(zenTotal$day == "3")] <- "tuesday"
+zenTotal$day[which(zenTotal$day == "4")] <- "wednesday"
+zenTotal$day[which(zenTotal$day == "5")] <- "thursday"
+zenTotal$day[which(zenTotal$day == "6")] <- "friday"
+zenTotal$day[which(zenTotal$day == "7")] <- "saturday"
+
+#change column orders----------------------------
+zenTotal <- zenTotal[c(4, 3, 16, 17, 18, 19, 1, 8, 6, 9, 10, 11, 12, 13, 5, 2, 7, 14, 15)]
+
+colnames(zenTotal) <- c("nice.id", "ymd", "year", "month", "date", "day", "assignee.id", "assignee.name", 
+                        "serviceType", "venue", "category_list", "other_howTo", "role", "affiliation", 
+                        "subject", "description", "comments", "time_spent", "prep_time")
+
+#add columns---------#total 27 columns
+zenTotal$categories <- ""
+zenTotal$resources <- ""
+zenTotal$otherResources <- ""
+zenTotal$projectType <- ""
+zenTotal$methodology <- ""
+zenTotal$user_num <- ""
+zenTotal$time_frame <- ""
+zenTotal$time <- ""
+
+zenTotal <- cbind(zenTotal, catRes)
+
+#April 19
+
+apr2019 <- zenTotal %>% 
+  filter(ymd >= as.Date("2019-04-01")) %>% 
+  filter(ymd <= as.Date("2019-04-30"))
+
+apr2019_pi <- apr2019 %>%
+  filter(assignee.id == "7090351188" | assignee.id == "365294547553" |
+           assignee.id == "372427651153" | assignee.id == "367609395233" |
+           assignee.id == "1055020767" | assignee.id == "365865788874")
+
+setwd("/Users/maiuchida/Desktop/R_Analysis/zenDesk/monthly/April2020")
+```
+
+### April 2020
+Plot below shows the changes in the total number of tickets solved in this month.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#plot for total ticket trends--------------------
+ggplot(aprTot, aes(ymd, n)) + 
+  geom_line(color = "#000080") + 
+  scale_x_date(date_breaks = "day", date_labels = "%b %d", 
+               limits = c(as.Date("2020-04-01"), as.Date("2020-04-30"))) + 
+  labs(title = "zendesk ticket trends for the informationist team (total, april 2020)", 
+       subtitle = "N = 69",
+       y = "ticket count" , x = "date") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10),
+        legend.title = element_blank(),
+        legend.position = "bottom") 
+``` 
+
+### April 2019
+
+Due to the pandemic of COVID-19, the Health Sciences Library staff were asked to work from home since March 16, 2020. 
+The plot below shows the service trend of the info team in April 2019, as this will be a good measure of comparison to see how COVID-19 affected the services we provide.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#prepare april 19 dataset 
+apr19Tot <- apr2019_pi %>%
+  group_by(ymd) %>% 
+  count()
+
+#add days
+date <- ymd(apr19Tot$ymd)
+apr19Tot$day <- wday(date)
+apr19Tot$day <- as.character(apr19Tot$day)
+
+#convert days (number) to letter
+apr19Tot$day[which(apr19Tot$day == "1")] <- "sunday"
+apr19Tot$day[which(apr19Tot$day == "2")] <- "monday"
+apr19Tot$day[which(apr19Tot$day == "3")] <- "tuesday"
+apr19Tot$day[which(apr19Tot$day == "4")] <- "wednesday"
+apr19Tot$day[which(apr19Tot$day == "5")] <- "thursday"
+apr19Tot$day[which(apr19Tot$day == "6")] <- "friday"
+apr19Tot$day[which(apr19Tot$day == "7")] <- "saturday"
+
+#combined dataset
+apr19Tot$year <- "2019"
+aprTot$year <- "2020"
+
+apr19Tot$ymd <- as.Date(apr19Tot$ymd)
+aprCmb <- rbind(apr19Tot, aprTot)
+aprCmb$ymd <- as.Date(aprCmb$ymd)
+
+#separate the column by year, month, date
+aprCmb$ymd2 <- aprCmb$ymd
+aprCmb <- aprCmb %>% separate(ymd2, c("year", "month", "date"), sep = "-")
+aprCmb$date <- as.factor(aprCmb$date)
+aprCmb$year <- as.factor(aprCmb$year)
+aprCmb$year <- factor(aprCmb$year, level = c("2020", "2019"))
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#April 2019 plot 
+ggplot(apr19Tot, aes(ymd, n)) + 
+  geom_line(color = "#00B2FF") + 
+  scale_x_date(date_breaks = "1 day", date_labels = "%b %d", 
+               limits = c(as.Date("2019-04-01"), as.Date("2019-04-30"))) +
+  ylim(min(apr19Tot$n), 6) +
+  labs(title = "zendesk ticket trends for the informationist team (total, april 2019)", 
+       subtitle = "N = 48",
+       y = "ticket count" , x = "date") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10),
+        legend.title = element_blank(),
+        legend.position = "bottom") 
+
+```
+
+
+### April 2019 vs. April 2020
+
+Dispite the concerns we had that people might feel harder to reach out to us, the data show that about 44% increse in the tickets solved in April 2020 compared to April 2019. Also, the shape of graphs are more or less similar, but magnified in 2020. This result suggest that the service slowdown due to COVID-19 related work from order is negligible or none. 
+
+```{r, echo=FALSE, warning=FALSE}
+#comparison plot of April 2020 vs April 2019
+p1 <-
+  ggplot(aprCmb, aes(x = date, y = n, group = year, color = year, linetype = year)) + 
+  geom_line() +
+  labs(title = "zendesk ticket trends comparison - info team (2019 vs 2020)", 
+       subtitle = "N(2020) = 69, N(2019) = 48",
+       y = "ticket count" , x = "date") +
+  scale_color_manual(values = c("#000080", "#00B2FF")) +
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "bottom",
+        strip.background = element_blank())
+
+p1
+
+```
+
+### Tickets by School
+
+The genral trend of our top client being VP&S, Mailman, SON, and NYP persists this month as well. In March 2020, service requests from NYP client declined (2 tickets solved). However, they came back to ask for assistance in April 2020. 
+
+For those classied themselves others, besides the class tickes,  three tickets were from undergrad studetns and one was from non-CU faculty. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+aprTot_school <- infoApr20_CLN %>%
+  group_by(affiliation) %>%
+  count()
+
+aprTot_school$affiliation[which(aprTot_school$affiliation == "-")] <- "Unknown"
+aprTot_school$affiliation[which(aprTot_school$affiliation == "Physical Therapy")] <- "College of Physicians and Surgeons"
+
+aprTot_school_Table <- aprTot_school %>% arrange(desc(n))
+
+
+
+freqAf_top <- aprTot_school %>% filter(affiliation == "College of Physicians and Surgeons" | 
+                                         affiliation == "School of Nursing" | 
+                                         affiliation == "Mailman School of Public Health" | 
+                                         affiliation == "New York Presbyterian")
+
+freqAf_top$affiliation[which(freqAf_top$affiliation == "College of Physicians and Surgeons")] <- "VP&S"
+freqAf_top$affiliation[which(freqAf_top$affiliation == "School of Nursing")] <- "SON"
+freqAf_top$affiliation[which(freqAf_top$affiliation == "Mailman School of Public Health")] <- "Mailman"
+freqAf_top$affiliation[which(freqAf_top$affiliation == "New York Presbyterian")] <- "NYP"
+
+
+
+#reverse the order as follow 
+freqAf_top$affiliation <- factor(freqAf_top$affiliation, levels = c("NYP",
+                                                                    "SON", 
+                                                                    "Mailman",
+                                                                    "VP&S"
+))
+
+
+p2 <- ggplot(freqAf_top, aes(x= affiliation, y = n, color = affiliation)) +
+  geom_point() + 
+  geom_segment( aes(x=affiliation, xend=affiliation, y=0, yend= n)) +
+  labs(title = "ticket trend comparison by affiliation (top 4, n = 50)", 
+       subtitle = "april 2020 - 70% of total tickets solved", 
+       y = "count") +
+  scale_color_manual(values = c("#488F5B","#FA8677", "#C2076E", "#648CBD")) +
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "none") +
+  coord_flip()
+
+p2
+
+#table for more detailed breakdown
+aprTot_school <- infoApr20_CLN %>%
+  group_by(affiliation) %>%
+  count()
+
+aprTot_school$affiliation[which(aprTot_school$affiliation == "-")] <- "Unknown"
+
+aprTot_school_Table <- aprTot_school %>% arrange(desc(n))
+
+formattable(aprTot_school_Table, 
+            align = c("l", "r"))
+
+```
+
+### Ticket distribution by day 
+
+This plot contains the data that are zendesk inquiries, direct emails, and appointments (n=64), which excludes the classes conducted in April 2020. As shown on the plot, we had the highest volume of ticket inquires on Fridays in April, 2020. Since the lockdown started, we no longer see the trends of Wendensays being the low-volume day. Instead, Mondays and Tuesdays become the new low volume days. This might suggest some changes in our clients way of working/ how classes being conducted. 
+
+```{r, echo=FALSE, warning=FALSE}
+#days--------
+infoApr20_CLN <- within(infoApr20_CLN, 
+                        day <- factor(day, 
+                                      levels = c("monday", "tuesday", "wednesday",
+                                                 "thursday", "friday", "saturday", 
+                                                 "sunday")))
+infoApr20_CLN_noClass <- infoApr20_CLN %>% filter(serviceType != 311928)
+
+dayPlot <- ggplot(infoApr20_CLN_noClass, aes(day)) + 
+  geom_bar(fill= "#000080", alpha = 0.9) + 
+  labs(title = "ticket distribution by day") + 
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "none")
+dayPlot
+```
+
+#### More detailed breakdown of the ticket distribution by day as follows:
+
+```{r, echo=FALSE, warning=FALSE}
+dayTable <- table(infoApr20_CLN_noClass$day) %>% as.data.frame() %>% arrange(desc(Freq))
+colnames(dayTable) <- c("day", "n")
+formattable(dayTable, 
+            align = c("l","l"))
+```
+
+### More on day trends
+
+By the first plot, it shows that student population appears to be pulling the high volume trend on Thursday. When this is broken down by affiliations, both Mailman and SON has the highest request volume on Thursday; however, VP&S's request shows a high concentation on Fridays. 
+
+```{r, echo=FALSE, warning=FALSE}
+dayRole <- with(infoApr20_CLN_noClass, table(role, day))
+dayRole <- as.data.frame(dayRole)
+
+dayRole <- dayRole %>% filter(role == "Student" | role == "Faculty" | role == "Postdoc Fellow" | 
+                                role == "Staff")
+
+dayRole$day <- factor(dayRole$day, level = c("monday", "tuesday", "wednesday", "thursday",
+                                             "friday", "saturday", "sunday"))
+
+dayRole$role <- factor(dayRole$role, level = c("Student", "Faculty", "Staff", "Postdoc Fellow"))
+
+p4 <- ggplot(dayRole, aes(day, Freq, group = role, color = role)) +
+  geom_line() +
+  geom_point(size = 1, shape = 21, fill = "white") +
+  labs(title = "monthly ticket trend comparison by top 4 roles and day (n = 64)", 
+       subtitle = "April 2020 -- 93% of total tickets solved",
+       y = "count" , x = "month") + 
+  scale_color_manual(values = c("#F27979","#F2BF27", "#6F8CA6", "#8BCAD9")) +
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10),
+        legend.title = element_blank(),
+        legend.position = "bottom")
+
+p4
+
+#day and affiliation----------
+dayAff <- with(infoApr20_CLN_noClass, table(affiliation, day))
+dayAff <- as.data.frame(dayAff)
+
+dayAff <- dayAff %>% filter(affiliation == "College of Physicians and Surgeons" | 
+                              affiliation == "School of Nursing" | 
+                              affiliation == "Mailman School of Public Health" | 
+                              affiliation == "New York Presbyterian")
+
+dayAff$affiliation <- as.character(dayAff$affiliation)
+dayAff$affiliation[which(dayAff$affiliation == "College of Physicians and Surgeons")] <- "VP&S"
+dayAff$affiliation[which(dayAff$affiliation == "School of Nursing")] <- "SON"
+dayAff$affiliation[which(dayAff$affiliation == "Mailman School of Public Health")] <- "Mailman"
+dayAff$affiliation[which(dayAff$affiliation == "New York Presbyterian")] <- "NYP"
+
+dayAff$day <- factor(dayAff$day, level = c("monday", "tuesday", "wednesday", "thursday",
+                                           "friday", "saturday", "sunday"))
+
+dayAff$affiliation <- factor(dayAff$affiliation, level = c("VP&S",
+                                                           "Mailman",
+                                                           "SON",
+                                                           "NYP"))
+
+
+p5 <- ggplot(dayAff, aes(day, Freq, group = affiliation, color = affiliation)) +
+  geom_line() +
+  geom_point(size = 1, shape = 21, fill = "white") +
+  labs(title = "monthly ticket trend comparison by affiliation (top 4, n = 50)", 
+       subtitle = "April, 2020 -- 71% of the total tickets solved", 
+       y = "count", x = "day") +
+  scale_color_manual(values = c("#648CBD", "#C2076E", "#FA8677", "#488F5B")) +
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "bottom")
+
+p5
+
+#day, affiliation, and role -------------
+dayAf_role <- with(infoApr20_CLN_noClass, table(affiliation, role, day))
+dayAf_role <- as.data.frame(dayAf_role)
+
+dayAf_role$affiliation <- as.character(dayAf_role$affiliation)
+dayAf_role$affiliation[which(dayAf_role$affiliation == "College of Physicians and Surgeons")] <- "VP&S"
+dayAf_role$affiliation[which(dayAf_role$affiliation == "School of Nursing")] <- "SON"
+dayAf_role$affiliation[which(dayAf_role$affiliation == "Mailman School of Public Health")] <- "Mailman"
+
+dayAf_role <- dayAf_role %>% 
+  filter(affiliation == "VP&S" | 
+           affiliation == "SON" | 
+           affiliation == "Mailman") %>%
+  filter(role == "Faculty" | role == "Student")
+
+
+dayAf_role$day <- factor(dayAf_role$day, level = c("monday", "tuesday", "wednesday", "thursday",
+                                                   "friday", "saturday", "sunday"))
+
+dayAf_role$affiliation <- factor(dayAf_role$affiliation, level = c("VP&S",
+                                                           "Mailman",
+                                                           "SON"))
+
+```
+
+```{r, echo=FALSE, warning=FALSE}
+p6 <- ggplot(dayAf_role, aes(day, Freq, group = affiliation,
+                             color = affiliation, linetype = role)) + 
+  geom_line() +
+  labs(title = "day ticket trend comparison by affiliation and role (n = 29)", 
+       subtitle = "April, 2020", 
+       y = "count", x = "month") +
+  scale_color_manual(values = c("#648CBD", "#C2076E", "#FA8677")) +
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(angle = 45, hjust = 1, color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "bottom",
+        strip.background = element_blank())
+
+p6 <- p6 + facet_wrap(~ role, ncol = 2)
+p6
+
+```
+<br />
+When breaking down the data by day, role, and affiliation, it shows that inquiries from students are high in volume in the latter half of the week (Thursday and Friday). 
+
+<br />
+
+### Appointment time-frame
+
+The plot below shows that the distribution of phone/ Zoom appointments in April, 2020. 
+As shown about 97% of appointments were conducted via Zoom, suggesting people's smooth transition from in-person appintment to Zoom appointment. 
+
+Same as March, 2020, our clients show preference in having in-person/ zoom appointment during the morning time frame (~ 11:59 am) or late afternoon time frame (3 pm - 4:59 pm) in April, 2020. 
+
+Compared to March, 2020, the number of appointments conducted increased by 28%. 
+
+```{r, echo=FALSE, warning=FALSE}
+#remove class tickets
+time_frame <- infoApr20_CLN %>% filter(serviceType != 311928)
+
+time_frame <- infoApr20_CLN %>% filter(venue == "In Person" | venue == "Phone"|
+                                         venue == "Online Conference") 
+
+time_frame$time_frame[which(time_frame$time_frame == "morning")] <- "morning"
+time_frame$time_frame[which(time_frame$time_frame == "early_afternoon")] <- "early afternoon"
+time_frame$time_frame[which(time_frame$time_frame == "late_afternoon")] <- "late afternoon"
+
+time_frame <- within(time_frame, 
+                     time_frame <- factor(time_frame, 
+                                          levels = c("morning", "early afternoon", 
+                                                     "late afternoon", "evening")))
+
+timePlot <- ggplot(time_frame, aes(time_frame, fill = venue)) + 
+  geom_bar() + 
+  labs(title = "phone/ zoom appointment preferred time frame", 
+       subtitle = "n = 32",
+       x = "time frame", y = "count") + 
+  scale_fill_manual(values = c("#072F5F","#1261A0", "#64C5D7")) +
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "right")
+timePlot
+
+time_frame_Table <- table(time_frame$time_frame) %>% as.data.frame() %>% arrange(desc(Freq)) #3 NA's 
+```
+
+### Tickets solved by venue
+
+Unlike the general trends, Online conference (Zoom meetings) is the most popular venue in April, 2020. This might be becasue of in-person appointments becoming zoom meetings, in addition to a general increse in the volume of tickets. The data show that about a half of the inquires are appointments, the other half is solved via written form of communication.
+
+```{r, echo=FALSE, warning=FALSE}
+#removing class tickets 
+venue_df <- infoApr20_CLN %>% select(nice.id, serviceType, venue) %>% filter(!serviceType == "311928")
+venue_df <- venue_df %>% filter(venue == "Website Request" | venue == "Online Conference"
+                                | venue == "In Person" | venue == "Phone" | venue == "Direct Email")
+venue_df <- within(venue_df, 
+                   venue <- factor(venue, 
+                                   levels = names(sort(table(venue), 
+                                                       decreasing = TRUE))))
+venuePlot <- 
+  ggplot(venue_df, aes(venue, fill = venue)) + 
+  geom_bar() + 
+  labs(title = "tickets solved by venue", 
+       subtitle = "n = 64",
+       x = "venue", y = "count") + 
+  theme_classic() +
+  scale_fill_manual(values = c("#072F5F","#64C5D7", "#5ca08e", "#1261A0")) +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "right")
+
+venuePlot
+
+```
+
+#### More detailed breakdown of the tickets by venue
+```{r, echo=FALSE, warning=FALSE}
+venTable <- table(infoApr20_CLN_noClass$venue) %>% as.data.frame() %>% arrange(desc(Freq))
+
+colnames(venTable) <- c("venue", "n")
+
+formattable(venTable, 
+            align = c("l", "r"))
+```
+
+
+### Zendesk service categories
+
+About 41% of service requested are classified as "Literature Search", 36% of them are classified as "Systematic Review" from the Zendeks ticket form. These two are usually our top categories as "Literature Search" contains various types of services, and "Systematic Review" has been one of our distinct services that has a higher demand. 
+
+```{r, echo = FALSE, warning=FALSE}
+#original categories#
+infoApr20_CLN2 <- infoApr20_CLN %>% filter(serviceType != "311928")
+infoApr20_CLN2 <- infoApr20_CLN2 
+infoApr20_CLN2$category_list <- as.character(infoApr20_CLN2$category_list)
+infoApr20_CLN2$category_list[which(infoApr20_CLN2$category_list == "Bibliographic Citation Management Software")] <- "Citation Management"
+infoApr20_CLN2 <- within(infoApr20_CLN2, 
+                         category_list <- factor(category_list, 
+                                                 levels = names(sort(table(category_list), 
+                                                                     decreasing = TRUE))))
+catOrgTable <- table(infoApr20_CLN2$category_list) %>% as.data.frame() %>% arrange(desc(Freq))
+
+colnames(catOrgTable) <- c("original_category", "count")
+
+
+
+catOrgTable %>% 
+  arrange(desc(count)) %>%
+  slice(1:4) %>%
+  ggplot(., aes(original_category, count)) + 
+  geom_bar(stat = "identity", fill= "#000080", alpha = 0.9) + 
+  labs(title = "Service request classification (zendesk original)", 
+       subtitle = "n = 64",
+       x = "categories", y = "count") + 
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "right")
+```
+
+### More detailed categories
+
+After re-coding the data, the data show that our clients seek for assistance in development of search strategies (people haven't started the search yet and asked for assistance) the most. This might be a good topic for crafting a KBA or instructional document. Our clients also appear to need some help in selection of databases (people do not know which databases to search in). We already have a resource on how to select a database[ a KBA regarding selecting a database](https://new.library.cumc.columbia.edu/node/2257), which is a great resource to promote to. The trend of these two categories being most popular inquires persists from March, 2020. 
+
+It is noteworthy that compared to March, 2020, inquiries regarding editing search strategies increased. This might suggest that some clients are repeaters or some more advanced clients started to use our services. It would be important to track and analyze the trends on this category, becasue if inquires shift from the development of search strategies to editing search strategies, that might be a good indicator that our clients have enough resource to start their own search (enabling self-learning) and our support remains mainly to solidify or improve their search strategy (more consulting oriented).
+
+
+In addition, same as March, 2020, systematic review general inquiries are still the third most popular inquires category. This suggests that promotion of the systematic review class might be helpful to provide consistent and high-quality information to our clients, which will also reduce the time we answer to a similar type of general questions. This will allow us to spend more time on more complex requests or other tasks, such as development of resources and/ or educational materials. 
+
+
+```{r, echo=FALSE, warning=FALSE, message = FALSE}
+#more detailed categories
+infoApr20_CLN[, 31:115][is.na(infoApr20_CLN[, 31:115])] <- 0
+
+infoApr20_CLN3 <- infoApr20_CLN
+infoApr20_CLN3$ymd <- as.character(infoApr20_CLN3$ymd)
+infoApr20_CLN3 <- infoApr20_CLN3 %>% filter(serviceType != 311928) #remove class tickets 
+
+cat <- gather(infoApr20_CLN3, key = "nice.id", "count", appointment_setup:tutorials)
+
+cat2 <- cat[!(cat$count == 0),]
+
+cat2 <- table(cat2$nice.id) %>% as.data.frame() %>% arrange(desc(Freq))
+
+colnames(cat2) <- c("categories", "count")
+
+#format the categories (changing how they look)
+cat2$categories <- gsub("_", " ", cat2$categories)
+cat2$categories <- toTitleCase(cat2$categories)
+
+cat2 %>% 
+  top_n(4) %>%
+  arrange(desc(count)) %>%
+  ggplot(., aes(x = reorder(categories, - count), count)) + 
+  geom_bar(stat = "identity", fill= "#000080", alpha = 0.9) + 
+  labs(title = "Service request classification (re-classified)", 
+       subtitle = "N = 134",
+       x = "categories", y = "count") + 
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text.x = element_text(angle = 40, hjust = 1),
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "right")
+```
+
+##### A list of service categories and distribution
+```{r, echo=FALSE, warning=FALSE}
+formattable(cat2,
+            align = c("l", "r"))
+```
+
+### Resources 
+
+Same as other months, Pubmed is our top resource. Higher volume of Covidence and Prisma suggest that large volume of systematic review inquiries, which matches with the methodology data.
+
+```{r, include=FALSE}
+#resources used
+
+res <- gather(infoApr20_CLN3, key = "nice.id", "count", Accessmedicine:Zotero)
+
+res <- res[!(res$count == 0),]
+
+res2 <- table(res$nice.id) %>% as.data.frame() %>% arrange(desc(Freq))
+
+colnames(res2) <- c("resources", "count")
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+res2 %>% 
+  top_n(4) %>%
+  arrange(desc(count)) %>%
+  ggplot(., aes(x = reorder(resources, - count), count)) + 
+  geom_bar(stat = "identity", fill= "#000080", alpha = 0.9) + 
+  labs(title = "Top resources", 
+       subtitle = "N = 115",
+       x = "resource", y = "count") + 
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "right")
+
+formattable(res2,
+            align = c("l", "r"))
+```
+
+### Methodology
+
+The trend of Systematic Review being the most popular methodology persists in April, 2020. It is noteworthy that 5 tickets are regarding scoping review, which we did not observe this trend in March, 2020. Also, about 11% of clients are unsure of whihc review to conduct. This suggests that promotion/ revamping of [the review types comparison chart](https://library.cumc.columbia.edu/sites/default/files/page/A%20Comparison%20of%20Reviews.pdf) might be helpful. 
+
+```{r, include=FALSE}
+#methodologies 
+method <- table(infoApr20_CLN3$methodology) %>% as.data.frame() %>% arrange(desc(Freq))
+colnames(method) <- c("methodology", "count")
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#format the categories (changing how they look)
+method$methodology <- gsub("_", " ", method$methodology)
+method$methodology <- toTitleCase(method$methodology)
+
+method %>% 
+  top_n(4) %>%
+  arrange(desc(count)) %>%
+  ggplot(., aes(x = reorder(methodology, - count), count)) + 
+  geom_bar(stat = "identity", fill= "#000080", alpha = 0.9) + 
+  labs(title = "Popular methodology", 
+       subtitle = "n = 64",
+       x = "resource", y = "count") + 
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "right")
+```
+
+##### A list of methodology types and distribution
+```{r, echo=FALSE, warning=FALSE}
+formattable(method,
+            align = c("l", "r"))
+```
+
+### Project type 
+
+In April 2020, the most popular project type was publication. Considering that most of the clients who submitted inquries regarding publications in March 2020, was John's CBCH or SON clients, it was expected that April 2020 would have a smilar breakdown. However, the clients' role varies from students to staff. Also, thesis and dissertation related inquiries are high volume this month. 
+
+```{r, include=FALSE}
+#project types
+project <- table(infoApr20_CLN3$projectType) %>% as.data.frame() %>% arrange(desc(Freq))
+colnames(project) <- c("project", "count")
+
+#format the categories (changing how they look)
+project$project <- gsub("_", " ", project$project)
+project$project <- toTitleCase(project$project)
+```
+
+```{r, echo=FALSE, warning=FALSE, message = FALSE}
+project %>% 
+  top_n(4) %>%
+  arrange(desc(count)) %>%
+  ggplot(., aes(x = reorder(project, - count), count)) + 
+  geom_bar(stat = "identity", fill= "#000080", alpha = 0.9) + 
+  labs(title = "Popular project type", 
+       subtitle = "n = 64",
+       x = "resource", y = "count") + 
+  theme_classic() +
+  theme(axis.line = element_line(color = "grey37"),
+        axis.ticks = element_line(color = "grey37"), 
+        axis.text = element_text(color = "grey37"), 
+        axis.title.x = element_text(color = "grey7"), 
+        axis.title.y = element_text(color = "grey7"), 
+        plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 10), 
+        legend.title = element_blank(),
+        legend.position = "right")
+
+```
+
+##### A list of project types and distribution
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+formattable(project,
+            align = c("l", "r"))
+```
+
+### Online classes 
+
+5 online classes were conducted in April, 2020. 
+
+* Those are: 
+    + Self-Editing Workshop (6 attendees)
+    + Survival Skills Workshop (5 attendes)
+    + Index Flex (3 attendees)
+    + VP&S Mechanisms and Practice Seminar (~120 attendees)
+    + So You Want to do a Systematic Review Class (1 attendee)
+    
+Total number clients served from the classes in April is about 135. They are from various schools and affiliations, which includes but not limited to Mailman, SON, VP&S, and NYP. 
+
+
+### Other
+
+#### COVID-19
+Among 64 tickets, 3 of them are COVID-19 related inquiries, 1 maybe a COVID-19 related
+
+#### Forms 
+
+We've started to use the new user inquiry form since the early March, 2020. Majority of the web request comes from the new form. However, unlike in the past, the number of inquiries via CUL form has increased. This might indicate that people might be finding the HSL services from the Mornigside campus libraries. This issue might resolve as we complete the transition to the new website. 
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+webReq <- infoApr20_CLN3 %>% filter(venue == "Website Request")
+
+form <- table(webReq$form) %>% as.data.frame() %>% arrange(desc(Freq))
+colnames(form) <- c("form", "count")
+
+formattable(form, 
+            align = c("l", "r"))
+
+```
+
+Among the new forms, majority of them that are assigned to the info team was the consult form, which suggest that classification might be working. 
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+form_new <- infoApr20_CLN3 %>% filter(form == "new") 
+form_new <- table(form_new$form_type) %>% as.data.frame() %>% arrange(desc(Freq))
+colnames(form_new) <- c("form type (new)", "count")
+
+formattable(form_new, 
+            align = c("l", "r"))
+``` 
+
+<div style="margin-bottom:50px;">
+</div>
+
+#### Lastly... Thanks so much for your awesome documentation practice! I really appreciate it! You guys make this report happen!
+
+<div style="margin-bottom:5px;">
+</div>

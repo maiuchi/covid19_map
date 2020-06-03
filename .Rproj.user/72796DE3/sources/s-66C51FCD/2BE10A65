@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1591123615087.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2824168645",
+    "id" : "2BE10A65",
+    "lastKnownWriteTime" : 1591192737,
+    "last_content_update" : 1591192737242,
+    "path" : "~/Desktop/covid19_map/06-02-20_covid19_map.R",
+    "project_path" : "06-02-20_covid19_map.R",
+    "properties" : {
+        "cursorPosition" : "51,0",
+        "scrollLine" : "30",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

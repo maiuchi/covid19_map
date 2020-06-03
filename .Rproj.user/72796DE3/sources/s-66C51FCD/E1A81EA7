@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1591124196388.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "E1A81EA7",
+    "lastKnownWriteTime" : 5075223040,
+    "last_content_update" : 1591124196388,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "id" : "aa723ad349d548a6b527631605a57c18",
+        "name" : "counties",
+        "title" : "counties"
+    },
+    "relative_order" : 8,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "object_explorer"
+}
