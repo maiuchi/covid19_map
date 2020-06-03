@@ -6,7 +6,7 @@ In this tutorial, you will learn how to make a COVID-19 dealth toll map in R usi
 
 Let's get started! 
 
-### Before you start coding... 
+### before you start coding... 
 
 I would suggest you to create a folder and an R project (R Studio -> File -> New Project) to keep things organized. 
 Also, please download a dataset from [this page](https://github.com/nytimes/covid-19-data/blob/master/us-counties.csv), and name it as "covid19_us-counties.csv"
