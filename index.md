@@ -43,7 +43,7 @@ glimpse(covid)
 
 ### covid data preparation 
 ```r
-#filter the covid data
+#filter the covid data and create a new data frame
 
 covid_sum <- covid %>% 
   filter(date == as.Date("2020-05-31")) %>%  #select data that is May 31, 2020
