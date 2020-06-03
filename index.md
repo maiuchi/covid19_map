@@ -2,14 +2,14 @@
 
 Have you ever womdered how COVID-19 maps are made? You have quite a few options to make one from using Geographic Information Systems (GIS) software like QGIS or ArcGIS to coding in R or Python.
 
-In this tutorial, you will learn how to make a COVID-19 dealth toll map in R using NYT publicly available data. This tutorial assumes that you know the basics of R and the structyre of geo-spatial data. 
+In this tutorial, you will learn how to make a COVID-19 dealth toll map in R using [NYT publicly available data](https://github.com/nytimes/covid-19-data). This tutorial assumes that you know the basics of R and the structyre of geo-spatial data. 
 
 Let's get started! 
 
 ### Before you start coding... 
 
 I would suggest you to create a folder and an R project (R Studio -> File -> New Project) to keep things organized. 
-Also, please download a dataset from this page, and name it as "covid19_us-counties.csv"
+Also, please download a dataset from [this page](https://github.com/nytimes/covid-19-data/blob/master/us-counties.csv), and name it as "covid19_us-counties.csv"
 
 ### now you are ready with your R project and script files... make sure you have all the package you need!
 ```r
