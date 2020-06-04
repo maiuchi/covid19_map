@@ -154,12 +154,7 @@ covid_sum <- covid %>%
 
 us_map <- usmap::us_map(region = "states")
 
-#the look with the default theme 
-usmap::plot_usmap(data = covid_sum, values = "death_sum") +
-  scale_fill_continuous() +
-  theme_grey()
-
-#let's clean up a bit
+#join data + visualize 
 usmap::plot_usmap(data = covid_sum, values = "death_sum", color = "grey40") +
   scale_fill_continuous(type='viridis', label = scales:: comma) +
   labs(title = "COVID-19 - total number of deaths",
