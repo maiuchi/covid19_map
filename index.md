@@ -2,14 +2,14 @@
 
 Have you ever wondered how COVID-19 maps are made? You have quite a few options to make one from using Geographic Information Systems (GIS) software like QGIS or ArcGIS to coding in R or Python.
 
-In this tutorial, you will learn how to make a COVID-19 dealth toll map in R using [NYT publicly available data](https://github.com/nytimes/covid-19-data). This tutorial assumes that you know the basics of R and have some familiatiry with geo-spatial data. 
+In this tutorial, you will learn how to make a COVID-19 dealth toll map in R using [NYT publicly available data](https://github.com/nytimes/covid-19-data). This tutorial assumes that you know the basics of R and have some familiarity with geospatial data. 
 
 Let's get started! 
 
 ### before you start coding... 
 
-I would suggest you to create a folder and an R project (R Studio -> File -> New Project) to keep things organized. 
-Also, please download a dataset from [this page](https://github.com/nytimes/covid-19-data/blob/master/us-counties.csv), and name it as "covid19_us-counties.csv"
+I would suggest you create a folder and an R project (R Studio -> File -> New Project) to keep things organized. 
+Also, please download a dataset from [this page](https://github.com/nytimes/covid-19-data/blob/master/us-counties.csv) and name it "covid19_us-counties.csv"
 
 ### now you are ready with your R project and script files... make sure you have all the packages you need!
 ```r
@@ -25,7 +25,7 @@ library(viridis)
 #please do so by calling the function "install.packages("put the name of the package")"
 ``` 
 
-### check and set your working directly 
+### check and set your working directory
 ```r
 #check your working directory
 getwd()
@@ -49,10 +49,10 @@ covid_sum <- covid %>%
   filter(date == as.Date("2020-05-31")) %>%  #select data that is May 31, 2020
   group_by(state) %>% #group the data by each state
   summarise(death_sum = sum(deaths)) 
-  #calcurate the sum of death in each state and put the result in a new column "death_sum"
+  #calculate the sum of death in each state and put the result in a new column "death_sum"
 ```
 ### us map data 
-Since we are visualizing the data at state level, make sure how map data looks like 
+Since we are visualizing the data at state level, make sure map data looks like 
 
 ```r
 us_map <- usmap::us_map(region = "states") #this is a package that has us map shapefile
@@ -97,7 +97,7 @@ usmap::plot_usmap(data = covid_sum, values = "death_sum", color = "grey40") +
        fill = "deaths (n)") + 
   theme_classic()+
 
-#remove unnecassary elements from the graphic-------------------------------
+#remove unnecessary elements from the graphic-------------------------------
 
 #remove background
   theme(panel.background=element_blank(),
