@@ -2,7 +2,7 @@
 
 Have you ever wondered how COVID-19 maps are made? You have quite a few options to make one from using Geographic Information Systems (GIS) software like QGIS or ArcGIS to coding in R or Python.
 
-In this tutorial, you will learn how to make a COVID-19 dealth toll map in R using [NYT publicly available data](https://github.com/nytimes/covid-19-data). This tutorial assumes that you know the basics of R and have some familiarity with geospatial data. 
+In this tutorial, you will learn how to make a COVID-19 death toll map in R using [NYT publicly available data](https://github.com/nytimes/covid-19-data). This tutorial assumes that you know the basics of R and have some familiarity with geospatial data. 
 
 Let's get started! 
 
